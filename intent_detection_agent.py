@@ -7,7 +7,7 @@ def find_intent(user_query):
     intent=intent_chain.invoke({'user_query':user_query})
     return intent
 
-print(find_intent(input("Enter the query")))
+# print(find_intent(input("Enter the query")))
 
      
      
