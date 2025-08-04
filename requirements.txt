@@ -1,3 +1,5 @@
 langchain 
 dotenv
 langchain_groq
+pandas 
+streamlit 
