@@ -10,7 +10,10 @@ user_input = st.text_input("Enter your query:")
 if st.button("Submit"):
     # Simple logic or response
     result=workflow(user_input)
-    st.write(result)
+    if result is None or result.empty:
+        st.write("Alright! Tell me Your Requirements")
+    else:
+         st.write(result)
 
 
     

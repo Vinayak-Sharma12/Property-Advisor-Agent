@@ -1,30 +1,22 @@
-from llm_models import deepseek_model
-from checklist_agent import field_to_set_agent
-from parser_and_prompts import query_generate_prompt,search_prompt_template,search_parser
-import pandas as pd # pyright: ignore[reportMissingModuleSource]
+import re
 import os
+from llm_models import deepseek_model
+from parser_and_prompts import query_generate_prompt,search_prompt_template,search_parser
+import pandas as pd 
 from dotenv import load_dotenv
 load_dotenv()
-import re
+
 
 local_path=os.getenv("LOCAL_PATH")
  
-# df=pd.read_csv("dataset/property_dataset_floor.csv")
-# print(df.head())
-fields={'society': False, 'price': False, 'rate': False, 'areaWithType': False, 
-        'bedRoom': True, 'bathroom': False, 'balcony': True, 'additionalRoom': False,
-          'address': False, 'floorNum': False, 'facing': False, 'agePossession': False, 
-          'nearbyLocations': False, 'furnishDetails': False, 'features': False, 
-          'rating': False
-        }
-# search_data={ 'Bedrooms':2, 'Balcony':2,'Facing':'West'}
-def make_query_and_fetch_result(user_query,df,columns):
-    search_data=get_search_data(user_query)
-    print(search_data)
+
+def make_query_and_fetch_result(df,columns,search_data):
     
     query_prompt = query_generate_prompt.format(columns=columns, search_data=search_data)
     result=deepseek_model.invoke(query_prompt).content
-    print(result)
+    # print(f"LLM Response with COT:{result}")
+
+    # Extracting Dataframe query code 
     match = re.search(r"```python\n(.*?)```", result, re.DOTALL)
     if match:
         query_code = match.group(1).strip()
@@ -32,6 +24,7 @@ def make_query_and_fetch_result(user_query,df,columns):
     else:
         print("No query code found.")
 
+   # Querying the DataFrame
     try:
         filtered_df = eval(query_code, {"df": df})
         print(len(filtered_df))
@@ -41,6 +34,7 @@ def make_query_and_fetch_result(user_query,df,columns):
         print("Error while evaluating query:", e)
         return None
 
+
 # make_query(df,fields)
 
 def get_search_data(user_query):
@@ -48,13 +42,12 @@ def get_search_data(user_query):
     result=search_chain.invoke(user_query)
     search_data=result.model_dump(exclude_none=True)
     # print(search_data)
-    # print(search_data['additionalRoom'].value)
     return search_data
 
 
 # get_search_data("Find a flat of 3bhk with 2 balocies and with Servent room")
 
-def run_csv_agent(user_query,fields,csv_path):
+def run_csv_agent(fields,csv_path,search_data):
     df=pd.read_csv(csv_path)
     columns=[]
     for key in fields:
@@ -62,7 +55,7 @@ def run_csv_agent(user_query,fields,csv_path):
             columns.append(key)
     
     print(columns)
-    result=make_query_and_fetch_result(user_query,df,columns)
+    result=make_query_and_fetch_result(df,columns,search_data)
     print(result)
     return result 
 
