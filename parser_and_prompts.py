@@ -1,8 +1,10 @@
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from models import Intent,FieldToSearch
+from models import SearchData
 
-parser=PydanticOutputParser(pydantic_object=Intent)
+search_parser=PydanticOutputParser(pydantic_object=SearchData)
+intent_parser=PydanticOutputParser(pydantic_object=Intent)
 field_to_set_parser=PydanticOutputParser(pydantic_object=FieldToSearch)
 
 intent_prompt = PromptTemplate(
@@ -29,9 +31,8 @@ Note:
 - Respond with valid JSON only. No explanation.
 """,
     input_variables=["user_query"],
-    partial_variables={"format_instructions": parser.get_format_instructions()}
+    partial_variables={"format_instructions": intent_parser.get_format_instructions()}
 )
-
 
 
 field_extraction_prompt = PromptTemplate(
@@ -57,4 +58,43 @@ Return only valid JSON. Do not explain your answer. Do not include any text outs
 """,
     input_variables=["user_query"],
     partial_variables={"format_instructions": field_to_set_parser.get_format_instructions()}
+)
+
+
+query_generate_prompt = PromptTemplate(
+    template="""
+You are a helpful assistant that generates Python Pandas DataFrame queries.
+
+The DataFrame is named `df` and contains the following columns:
+{columns}
+
+The user wants to filter this DataFrame using the following search criteria:
+{search_data}
+
+Follow this chain of thought:
+1. Match the keys in `search_data` to the closest corresponding column names in the DataFrame.
+2. Ignore any keys in `search_data` that don't match available column names.
+3. For the matched pairs, construct boolean conditions like `df['column'] == value`.
+4. Combine multiple conditions using the bitwise AND operator `&`.
+5. Enclose each condition in parentheses to ensure proper order of operations.
+
+Output:
+Return only the final Python Pandas query code (e.g., `df[...]`) that filters the DataFrame based on the matched criteria.
+""",
+    input_variables=["columns", "search_data"],
+)
+
+
+search_prompt_template = PromptTemplate(
+    template="""
+You are a real estate assistant that extracts structured search filters from a user's natural query.
+
+Extract the following information and return it in the correct format:
+
+{format_instructions}
+
+User Query: "{user_query}"
+""",
+    input_variables=["user_query"],
+    partial_variables={"format_instructions": search_parser.get_format_instructions()}
 )
