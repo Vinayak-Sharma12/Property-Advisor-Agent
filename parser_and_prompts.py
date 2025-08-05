@@ -134,3 +134,16 @@ User Query: "{user_query}"
     input_variables=["user_query"],
     partial_variables={"format_instructions": filter_column_parser.get_format_instructions()}
 )
+
+intent_response_prompt = PromptTemplate(
+    template="""
+You are a friendly and helpful real estate assistant bot.
+
+The user has not asked a property-related query. Your task is to respond politely and naturally — acknowledging the user's intent (Greeting, Farewell, or Other) — while smartly redirecting the conversation back to real estate topics without sounding forceful.
+
+Always keep your tone warm, engaging, and professional.
+
+User Query: "{user_query}"
+""",
+    input_variables=["user_query"]
+)
