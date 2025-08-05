@@ -2,3 +2,7 @@ venv
 .env
 .DS_Store
 __pycache__
+property_data.csv
+property_dataset_floor.csv
+property_dataset_new.csv
+Property_datatset.csv
