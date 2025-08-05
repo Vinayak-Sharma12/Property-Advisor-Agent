@@ -1,11 +1,13 @@
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
-from models import Intent,FieldToSearch
-from models import SearchData
+from models import Intent,FieldToSearch,SearchData,ApplyFilterToColumn
+
+
 
 search_parser=PydanticOutputParser(pydantic_object=SearchData)
 intent_parser=PydanticOutputParser(pydantic_object=Intent)
 field_to_set_parser=PydanticOutputParser(pydantic_object=FieldToSearch)
+filter_column_parser=PydanticOutputParser(pydantic_object=ApplyFilterToColumn)
 
 intent_prompt = PromptTemplate(
     template="""
@@ -63,31 +65,65 @@ Return only valid JSON. Do not explain your answer. Do not include any text outs
 
 query_generate_prompt = PromptTemplate(
     template="""
-You are a helpful assistant that generates Python Pandas DataFrame queries.
+You are a helpful assistant that generates a valid Pandas DataFrame filtering query in Python.
 
-The DataFrame is named `df` and contains the following columns:
+The DataFrame is named `df` and has the following columns:
 {columns}
 
-The user wants to filter this DataFrame using the following search criteria:
+The user has provided the following search criteria:
 {search_data}
 
-Follow this chain of thought:
-1. Match the keys in `search_data` to the closest corresponding column names in the DataFrame.
-2. Ignore any keys in `search_data` that don't match available column names.
-3. For the matched pairs, construct boolean conditions like `df['column'] == value`.
-4. Combine multiple conditions using the bitwise AND operator `&`.
-5. Enclose each condition in parentheses to ensure proper order of operations.
+Some of the columns require comparison filtering (`greater than` or `lesser than`) instead of equality. These rules are defined below:
+{value_greater_or_lesser}
+
+Please follow these steps:
+1. Match each key in `search_data` to the closest corresponding column in the DataFrame from the provided list.
+2. Ignore keys that do not match any column.
+3. For matched columns:
+   - If the column is listed in `value_greater_or_lesser`, use the specified comparison operator:
+     - "Greater than" → `df['column'] > value`
+     - "Lesser than" → `df['column'] < value`
+   - Otherwise, use an equality check: `df['column'] == value`
+4. Combine all conditions using the `&` (bitwise AND) operator.
+5. Wrap each condition in parentheses to ensure correct order of evaluation.
+6. Construct and return only the final Python statement to filter the DataFrame (e.g., `df[...]`).
 
 Output:
-Return only the final Python Pandas query code (e.g., `df[...]`) that filters the DataFrame based on the matched criteria.
+Return only the final line of code, starting with `df[...]`, that applies the appropriate filters to the DataFrame.
 """,
-    input_variables=["columns", "search_data"],
+    input_variables=["columns", "search_data", "value_greater_or_lesser"],
 )
 
 
 search_prompt_template = PromptTemplate(
     template="""
-You are a real estate assistant that extracts structured search filters from a user's natural query.
+You are a real estate assistant designed to extract structured search filters from a user's natural language query.
+
+Your task is to extract relevant attributes such as price, area, number of bedrooms, bathrooms, balconies, floor information, etc., along with the **numeric values exactly as stated** in the query.
+
+ Do not infer, adjust, or transform values under any condition. For example:
+- If a user says "more than one balcony", extract: `balcony = 1`
+- Do not apply any comparative reasoning (e.g., do not convert "more than one" to 2)
+- Ignore words like "more than", "less than", "above", or "under" — your job is only to extract the value mentioned alongside the attribute
+
+Let another system handle comparison logic separately.
+
+Return the output strictly in this structured format:
+
+{format_instructions}
+
+User Query: "{user_query}"
+""",
+    input_variables=["user_query"],
+    partial_variables={"format_instructions": search_parser.get_format_instructions()}
+)
+
+
+
+filter_prompt_template = PromptTemplate(
+    template="""
+You are a real estate assistant that you need to analyse the user query and find those columns that needs filter of greater than or lesser than 
+
 
 Extract the following information and return it in the correct format:
 
@@ -96,5 +132,5 @@ Extract the following information and return it in the correct format:
 User Query: "{user_query}"
 """,
     input_variables=["user_query"],
-    partial_variables={"format_instructions": search_parser.get_format_instructions()}
+    partial_variables={"format_instructions": filter_column_parser.get_format_instructions()}
 )

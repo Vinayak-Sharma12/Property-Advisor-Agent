@@ -90,5 +90,22 @@ class SearchData(BaseModel):
     connectivity_rating: Optional[bool] = Field(None, description="Whether ratings for connectivity/lifestyle/etc. are mentioned")
 
 
+class ComparisonEnum(str, Enum):
+    greater = "Greater than"
+    lesser = "Lesser than"
+
+
+class ApplyFilterToColumn(BaseModel):
+    Price_in_Crore: Optional[ComparisonEnum] = Field(None, description="Filter on price in Crore if query mentioned greater than or less than  price or above or under for price striclty ")
+    Rate_rs_sqft: Optional[ComparisonEnum] = Field(None, description="Filter on rate per sq.ft if query mention greater than or lesser or above or under for rate strictly ")  # Optional: include if needed
+    Area_in_sq_meter: Optional[ComparisonEnum] = Field(None, description="Filter on area in square meters if query mention greater than or lesser than or above or under for area or space striclty")
+
+    bedRoom: Optional[ComparisonEnum] = Field(None, description="Filter on number of bedrooms (BHK) if user query mention more than or less than or greater than or lesser than for area or space strictly")
+    bathroom: Optional[ComparisonEnum] = Field(None, description="Filter on number of bathrooms if user query mention more than or less than or greater than or lesser than for bathroom  strictly ")
+    balcony: Optional[ComparisonEnum] = Field(None, description="Filter on number of balconies if user query mention more than or less than or greater than or lesser than  for balcony strictly ")
+
+    floorNum: Optional[ComparisonEnum] = Field(None, description="Filter on floor number if user query mention above or below for floor stricltly ")
+    Totalfloor: Optional[ComparisonEnum] = Field(None, description="Filter on total number of floors  if the user query mention greater than or lesser than or more than or less than for Total floor ")
+
 
 
