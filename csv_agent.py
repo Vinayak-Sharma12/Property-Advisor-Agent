@@ -62,14 +62,23 @@ def get_search_data(user_query):
 
 def run_csv_agent(fields,csv_path,search_data,filter_on_columns):
     df=pd.read_csv(csv_path)
+    if fields['top_floor']==True:
+        df = df[df['Totalfloor'] == df['floorNum']]
+        print(df.head())
+
     columns=[]
     for key in fields:
+        if key=='top_floor':
+            continue
         if fields[key]==True:
             columns.append(key)
     
     print(columns)
 
     result=make_query_and_fetch_result(df,columns,search_data,filter_on_columns)
+    if result is None and fields['top_floor']==True and columns==[]:
+            result=df
+
     print(result)
     return result 
 

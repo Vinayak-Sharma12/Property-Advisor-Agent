@@ -69,6 +69,7 @@ You are a helpful assistant that generates a valid Pandas DataFrame filtering qu
 
 The DataFrame is named `df` and has the following columns:
 {columns}
+exclude top_floor column
 
 The user has provided the following search criteria:
 {search_data}

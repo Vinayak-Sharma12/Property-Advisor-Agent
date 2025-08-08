@@ -11,13 +11,14 @@ def workflow(user_query:str):
     if intent.Property_Related==True:
         fields=field_to_set_agent(user_query)
         fields_dict = fields.model_dump()
-        print(intent)
         print(fields_dict)
+        print(intent)   
         search_data=get_search_data(user_query)
         filter_on_columns=get_filter_for_columns(user_query)
         print(filter_on_columns)
         print(f"This is the Search{search_data}")
         result=run_csv_agent(fields_dict,csv_path,search_data,filter_on_columns)
+
         return result
     else:
         result=intent_response_agent(user_query)
@@ -27,4 +28,4 @@ def workflow(user_query:str):
 
 
     
-# workflow()
+# workflow(input("Enter your query"))
