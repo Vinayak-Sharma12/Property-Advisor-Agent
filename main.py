@@ -4,7 +4,7 @@ from csv_agent import run_csv_agent,get_search_data,get_filter_for_columns
 
 def workflow(user_query:str):
     # user_query=input("Enter Your Query")
-    csv_path='dataset/property_dataset_new.csv'
+    csv_path='dataset/updated_property_data_with_colony_lowercase.csv'
 
     intent=find_intent(user_query)
     print(intent)

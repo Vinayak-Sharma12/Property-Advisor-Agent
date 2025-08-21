@@ -98,19 +98,25 @@ Return only the final line of code, starting with `df[...]`, that applies the ap
 
 search_prompt_template = PromptTemplate(
     template="""
-You are a real estate assistant designed to extract structured search filters from a user's natural language query.
+You are a real estate assistant that extracts **structured search filters** from a user's natural language query.
 
-Your task is to extract relevant attributes such as price, area, number of bedrooms, bathrooms, balconies, floor information, etc., along with the **numeric values exactly as stated** in the query.
+Your job is to identify and extract:
+- Property attributes: price, area, number of bedrooms, bathrooms, balconies, floor information, etc.
+- City names mentioned in the query.
+-Society or colony or residency name mentioned  and convert it to lower case
+- Country name mentioned in the query.
 
- Do not infer, adjust, or transform values under any condition. For example:
-- If a user says "more than one balcony", extract: `balcony = 1`
-- Do not apply any comparative reasoning (e.g., do not convert "more than one" to 2)
-- Ignore words like "more than", "less than", "above", or "under" — your job is only to extract the value mentioned alongside the attribute
+**Extraction Rules:**
+1. **Always take numeric values exactly as stated in the query.**
+2. Do **not** infer, calculate, or transform values.
+3. Ignore comparative words like "more than", "less than", "above", "under", "at least", etc.  
+   Example:  
+   - Query: "more than one balcony" → Extract: `balcony = 1`  
+4. Do not convert words to numbers unless explicitly given (e.g., "two bedrooms" → `bedrooms = 2` is acceptable).
+5. Do not make assumptions about missing data.
 
-Let another system handle comparison logic separately.
-
-Return the output strictly in this structured format:
-
+**Output Format:**  
+Return the output strictly in this format:  
 {format_instructions}
 
 User Query: "{user_query}"
@@ -118,7 +124,6 @@ User Query: "{user_query}"
     input_variables=["user_query"],
     partial_variables={"format_instructions": search_parser.get_format_instructions()}
 )
-
 
 
 filter_prompt_template = PromptTemplate(
@@ -148,3 +153,4 @@ User Query: "{user_query}"
 """,
     input_variables=["user_query"]
 )
+

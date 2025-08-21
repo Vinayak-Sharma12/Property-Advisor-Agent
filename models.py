@@ -15,7 +15,7 @@ class FieldToSearch(BaseModel):
     #society: bool = Field(..., description="Whether the query involves the name of the society or project")
     Price_in_Crore: bool = Field(..., description="Is the user concerned with price (e.g. in Lacs or Crores)?")
     Rate_rs_sqft: bool = Field(..., description="Does the query mention rate per sq.ft?")
-    AreaType: bool = Field(..., description="Is the user interested in the area of the flat and its type (e.g. carpet, built-up)?")
+    AreaType: bool = Field(..., description="Is the user interested in the Type of area (e.g. carpet, built-up)?")
     Area_in_sq_meter: bool = Field(None, description="Does the query mention about the area or space of the property")
     bedRoom: bool = Field(..., description="Is the number of bedrooms or BHK mentioned?")
     bathroom: bool = Field(..., description="Does the query include details about bathrooms?")
@@ -32,7 +32,13 @@ class FieldToSearch(BaseModel):
     furnishDetails: bool = Field(..., description="Is the furnishing (e.g. AC, wardrobe) mentioned?")
     features: bool = Field(..., description="Are amenities or society features mentioned?")
     rating: bool = Field(..., description="Is there a reference to rating for environment, safety,LifeStyle,Connectivity etc.?")
+<<<<<<< HEAD
+    colony_or_sector:bool=Field(..., description="If the sector or colony or residency mention")
+    City:bool=Field(..., description="Is there a reference of City in the user query")
+    Country:bool=Field(...,description='Is there a reference of Country mentioned in the usery query')
+=======
     top_floor:bool=Field(...,Field='Does query is related to top floor')
+>>>>>>> main
 
 class AreaTypeEnum(str, Enum):
     carpet = "Carpet"
@@ -71,25 +77,28 @@ class AdditionalRoomType(str, Enum):
     servantandstore='Servant Room,Store Room'
 
 class SearchData(BaseModel):
-    Price_in_Crore: Optional[float] = Field(None, description="Price mentioned(should be in Crore)?")
-    Rate_rs_sqft: Optional[int] = Field(None, description="Does the query mention rate per sq.ft?")
-    AreaType: Optional[AreaTypeEnum] = Field(None, description="Type of area (Carpet, Built Up, Super Built Up)")
+    Price_in_Crore: Optional[List[float]] = Field(None, description="Price mentioned(should be in Crore)?")
+    Rate_rs_sqft: Optional[List[int]] = Field(None, description="Does the query mention rate per sq.ft?")
+    AreaType: Optional[List[AreaTypeEnum]] = Field(None, description="Type of area (Carpet, Built Up, Super Built Up)")
     Area_in_sq_meter: Optional[float] = Field(None, description="Area in sq.meter")
 
-    bedRoom: Optional[int] = Field(None, description="Number of bedrooms or BHK mentioned")
-    bathroom: Optional[int] = Field(None, description="Number of bathrooms mentioned")
-    balcony: Optional[int] = Field(None, description="Number of balconies mentioned")
+    bedRoom: Optional[List[int]] = Field(None, description="Number of bedrooms or BHK mentioned")
+    bathroom: Optional[List[int]] = Field(None, description="Number of bathrooms mentioned")
+    balcony: Optional[List[int]] = Field(None, description="Number of balconies mentioned")
 
-    additionalRoom: Optional[AdditionalRoomType] = Field(None, description="Type of extra room if mentioned")
+    # additionalRoom: Optional[AdditionalRoomType] = Field(None, description="Type of extra room if mentioned")
 
-    floorNum: Optional[int] = Field(None, description="Floor number if mentioned. Note:0th floor is the ground floor")
-    Totalfloor: Optional[int] = Field(None, description="Total floors in the building if mentioned")
+    floorNum: Optional[List[int]] = Field(None, description="Floor number if mentioned. Note:0th floor is the ground floor")
+    Totalfloor: Optional[List[int]] = Field(None, description="Total floors in the building if mentioned")
 
-    facing: Optional[FacingDirection] = Field(None, description="Direction of the property if mentioned")
+    facing: Optional[List[FacingDirection]] = Field(None, description="Direction of the property if mentioned")
 
     agePossession: Optional[int] = Field(None, description="Age of construction or possession in years")
+    colony_or_sector: Optional[List[str]] = Field(None, description=" Extract Sector Mentioned or colony mentioned or residency mentioned without City,State,Country name in small case")
 
     connectivity_rating: Optional[bool] = Field(None, description="Whether ratings for connectivity/lifestyle/etc. are mentioned")
+    City:Optional[List[str]]=Field(..., description="Cities mentioned in the User Query")
+    Country:Optional[List[str]]=Field(..., description="Countries mentioned in the User Query")
 
 
 class ComparisonEnum(str, Enum):
@@ -100,7 +109,7 @@ class ComparisonEnum(str, Enum):
 class ApplyFilterToColumn(BaseModel):
     Price_in_Crore: Optional[ComparisonEnum] = Field(None, description="Filter on price in Crore if query mentioned greater than or less than  price or above or under for price striclty ")
     Rate_rs_sqft: Optional[ComparisonEnum] = Field(None, description="Filter on rate per sq.ft if query mention greater than or lesser or above or under for rate strictly ")  # Optional: include if needed
-    Area_in_sq_meter: Optional[ComparisonEnum] = Field(None, description="Filter on area in square meters if query mention greater than or lesser than or above or under for area or space striclty")
+    Area_in_sq_meter: Optional[ComparisonEnum] = Field(None, description="Filter on area in square meters if query mention greater than or lesser than or less or more or above or under for area or space striclty")
 
     bedRoom: Optional[ComparisonEnum] = Field(None, description="Filter on number of bedrooms (BHK) if user query mention more than or less than or greater than or lesser than for area or space strictly")
     bathroom: Optional[ComparisonEnum] = Field(None, description="Filter on number of bathrooms if user query mention more than or less than or greater than or lesser than for bathroom  strictly ")
