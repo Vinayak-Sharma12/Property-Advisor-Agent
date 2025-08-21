@@ -60,27 +60,27 @@ def get_search_data(user_query):
 
 # get_search_data("Find a flat of 3bhk with 2 balocies and with Servent room")
 
-def run_csv_agent(fields,csv_path,search_data,filter_on_columns):
-    df=pd.read_csv(csv_path)
-    if fields['top_floor']==True:
+def run_csv_agent(fields, df, search_data, filter_on_columns):
+    # df is already loaded and passed in
+    if fields['top_floor'] == True:
         df = df[df['Totalfloor'] == df['floorNum']]
         print(df.head())
 
-    columns=[]
+    columns = []
     for key in fields:
-        if key=='top_floor':
+        if key == 'top_floor':
             continue
-        if fields[key]==True:
+        if fields[key] == True:
             columns.append(key)
-    
+
     print(columns)
 
-    result=make_query_and_fetch_result(df,columns,search_data,filter_on_columns)
-    if result is None and fields['top_floor']==True and columns==[]:
-            result=df
+    result = make_query_and_fetch_result(df, columns, search_data, filter_on_columns)
+    if result is None and fields['top_floor'] == True and columns == []:
+        result = df
 
     print(result)
-    return result 
+    return result
 
 # user_query=input("Enter Your Query")
 # run_csv_agent({'Price_in_Crore':True},"dataset/property_dataset_new.csv",get_search_data("Give me a flat more than 1.5 Crore"))

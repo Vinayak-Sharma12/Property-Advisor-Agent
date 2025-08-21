@@ -1,20 +1,21 @@
 import streamlit as st  
-from main import workflow
-# Title of the app
-st.title("Property Agent")
+import pandas as pd
+import asyncio
+from main import async_workflow
 
-# Input field
+@st.cache_data
+def load_data():
+    return pd.read_csv('dataset/property_dataset_with_beautiful_description.csv')
+
+df = load_data()
+
+st.title("Property Agent")
 user_input = st.text_input("Enter your query:")
 
-# Button to trigger processing
 if st.button("Submit"):
-    # Simple logic or response
-    result=workflow(user_input)
+    result = asyncio.run(async_workflow(user_input, df))  # Await the async workflow
     if result is None:
         st.write("Alright! Tell me Your Requirements")
     else:
-         st.write(result)
-
-
-    
+        st.write(result)
     st.success("Processed successfully!")

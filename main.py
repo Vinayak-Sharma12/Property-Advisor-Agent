@@ -1,31 +1,38 @@
-from intent_detection_agent import find_intent,intent_response_agent
+import asyncio
+import time
+from intent_detection_agent import find_intent, intent_response_agent
 from checklist_agent import field_to_set_agent
-from csv_agent import run_csv_agent,get_search_data,get_filter_for_columns
+from csv_agent import run_csv_agent, get_search_data, get_filter_for_columns
 
-def workflow(user_query:str):
-    # user_query=input("Enter Your Query")
-    csv_path='dataset/updated_property_data_with_colony_lowercase.csv'
+async def async_workflow(user_query: str, df):
+    timings = {}
 
-    intent=find_intent(user_query)
-    print(intent)
-    if intent.Property_Related==True:
-        fields=field_to_set_agent(user_query)
-        fields_dict = fields.model_dump()
-        print(fields_dict)
-        print(intent)   
-        search_data=get_search_data(user_query)
-        filter_on_columns=get_filter_for_columns(user_query)
-        print(filter_on_columns)
-        print(f"This is the Search{search_data}")
-        result=run_csv_agent(fields_dict,csv_path,search_data,filter_on_columns)
+    # Intent detection and field extraction in parallel
+    start = time.time()
+    intent_task = asyncio.to_thread(find_intent, user_query)
+    fields_task = asyncio.to_thread(field_to_set_agent, user_query)
+    intent, fields = await asyncio.gather(intent_task, fields_task)
+    timings['intent_and_fields'] = time.time() - start
 
+    if intent.Property_Related:
+        # Search data and filter extraction in parallel
+        start = time.time()
+        search_data_task = asyncio.to_thread(get_search_data, user_query)
+        filter_task = asyncio.to_thread(get_filter_for_columns, user_query)
+        search_data, filter_on_columns = await asyncio.gather(search_data_task, filter_task)
+        timings['search_and_filter'] = time.time() - start
+
+        # DataFrame filtering
+        start = time.time()
+        result = run_csv_agent(fields.model_dump(), df, search_data, filter_on_columns)
+        timings['run_csv_agent'] = time.time() - start
+
+        print("Timings (seconds):", timings)
         return result
     else:
-        result=intent_response_agent(user_query)
+        start = time.time()
+        result = await asyncio.to_thread(intent_response_agent, user_query)
+        timings['intent_response_agent'] = time.time() - start
+
+        print("Timings (seconds):", timings)
         return result
-
-    
-
-
-    
-# workflow(input("Enter your query"))
