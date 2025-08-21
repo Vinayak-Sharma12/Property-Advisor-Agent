@@ -1,20 +1,20 @@
 import streamlit as st  
+import pandas as pd
 from main import workflow
-# Title of the app
-st.title("Property Agent")
 
-# Input field
+@st.cache_data
+def load_data():
+    return pd.read_csv('dataset/property_dataset_with_beautiful_description.csv')
+
+df = load_data()
+
+st.title("Property Agent")
 user_input = st.text_input("Enter your query:")
 
-# Button to trigger processing
 if st.button("Submit"):
-    # Simple logic or response
-    result=workflow(user_input)
+    result = workflow(user_input, df)  # Pass df to workflow
     if result is None:
         st.write("Alright! Tell me Your Requirements")
     else:
-         st.write(result)
-
-
-    
+        st.write(result)
     st.success("Processed successfully!")

@@ -32,19 +32,15 @@ class FieldToSearch(BaseModel):
     furnishDetails: bool = Field(..., description="Is the furnishing (e.g. AC, wardrobe) mentioned?")
     features: bool = Field(..., description="Are amenities or society features mentioned?")
     rating: bool = Field(..., description="Is there a reference to rating for environment, safety,LifeStyle,Connectivity etc.?")
-<<<<<<< HEAD
     colony_or_sector:bool=Field(..., description="If the sector or colony or residency mention")
     City:bool=Field(..., description="Is there a reference of City in the user query")
     Country:bool=Field(...,description='Is there a reference of Country mentioned in the usery query')
-=======
     top_floor:bool=Field(...,Field='Does query is related to top floor')
->>>>>>> main
 
 class AreaTypeEnum(str, Enum):
     carpet = "Carpet"
     built_up = "Built Up"
     super_built_up = "Super Built up"
-
 
 class FacingDirection(str, Enum):
     east = "East"
@@ -86,7 +82,7 @@ class SearchData(BaseModel):
     bathroom: Optional[List[int]] = Field(None, description="Number of bathrooms mentioned")
     balcony: Optional[List[int]] = Field(None, description="Number of balconies mentioned")
 
-    # additionalRoom: Optional[AdditionalRoomType] = Field(None, description="Type of extra room if mentioned")
+    additionalRoom: Optional[AdditionalRoomType] = Field(None, description="Type of extra room if mentioned")
 
     floorNum: Optional[List[int]] = Field(None, description="Floor number if mentioned. Note:0th floor is the ground floor")
     Totalfloor: Optional[List[int]] = Field(None, description="Total floors in the building if mentioned")
