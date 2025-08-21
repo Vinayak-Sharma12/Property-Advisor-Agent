@@ -72,29 +72,37 @@ class AdditionalRoomType(str, Enum):
     servantandstudy='Servant Room,Study Room'
     servantandstore='Servant Room,Store Room'
 
+from typing import Optional, List, Union
+from pydantic import BaseModel, Field
+
+# Assuming your enums are already defined:
+# class AreaTypeEnum(str, Enum): ...
+# class AdditionalRoomType(str, Enum): ...
+# class FacingDirection(str, Enum): ...
+
 class SearchData(BaseModel):
-    Price_in_Crore: Optional[List[float]] = Field(None, description="Price mentioned(should be in Crore)?")
-    Rate_rs_sqft: Optional[List[int]] = Field(None, description="Does the query mention rate per sq.ft?")
-    AreaType: Optional[List[AreaTypeEnum]] = Field(None, description="Type of area (Carpet, Built Up, Super Built Up)")
+    Price_in_Crore: Optional[Union[float, List[float]]] = Field(None, description="Price mentioned (should be in Crore)?")
+    Rate_rs_sqft: Optional[Union[int, List[int]]] = Field(None, description="Rate per sq.ft?")
+    AreaType: Optional[Union["AreaTypeEnum", List["AreaTypeEnum"]]] = Field(None, description="Type of area (Carpet, Built Up, Super Built Up)")
     Area_in_sq_meter: Optional[float] = Field(None, description="Area in sq.meter")
 
-    bedRoom: Optional[List[int]] = Field(None, description="Number of bedrooms or BHK mentioned")
-    bathroom: Optional[List[int]] = Field(None, description="Number of bathrooms mentioned")
-    balcony: Optional[List[int]] = Field(None, description="Number of balconies mentioned")
+    bedRoom: Optional[Union[int, List[int]]] = Field(None, description="Number of bedrooms or BHK mentioned")
+    bathroom: Optional[Union[int, List[int]]] = Field(None, description="Number of bathrooms mentioned")
+    balcony: Optional[Union[int, List[int]]] = Field(None, description="Number of balconies mentioned")
 
-    additionalRoom: Optional[AdditionalRoomType] = Field(None, description="Type of extra room if mentioned")
+    additionalRoom: Optional["AdditionalRoomType"] = Field(None, description="Type of extra room if mentioned")
 
-    floorNum: Optional[List[int]] = Field(None, description="Floor number if mentioned. Note:0th floor is the ground floor")
-    Totalfloor: Optional[List[int]] = Field(None, description="Total floors in the building if mentioned")
+    floorNum: Optional[Union[int, List[int]]] = Field(None, description="Floor number if mentioned")
+    Totalfloor: Optional[Union[int, List[int]]] = Field(None, description="Total floors in the building if mentioned")
 
-    facing: Optional[List[FacingDirection]] = Field(None, description="Direction of the property if mentioned")
+    facing: Optional[Union["FacingDirection", List["FacingDirection"]]] = Field(None, description="Direction of the property if mentioned")
 
     agePossession: Optional[int] = Field(None, description="Age of construction or possession in years")
-    colony_or_sector: Optional[List[str]] = Field(None, description=" Extract Sector Mentioned or colony mentioned or residency mentioned without City,State,Country name in small case")
+    colony_or_sector: Optional[Union[str, List[str]]] = Field(None, description="Extract Sector/Colony/Residency mentioned without City/State/Country")
 
     connectivity_rating: Optional[bool] = Field(None, description="Whether ratings for connectivity/lifestyle/etc. are mentioned")
-    City:Optional[List[str]]=Field(..., description="Cities mentioned in the User Query")
-    Country:Optional[List[str]]=Field(..., description="Countries mentioned in the User Query")
+    City: Optional[Union[str, List[str]]] = Field(None, description="Cities mentioned in the User Query")
+    Country: Optional[Union[str, List[str]]] = Field(None, description="Countries mentioned in the User Query")
 
 
 class ComparisonEnum(str, Enum):

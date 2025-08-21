@@ -130,6 +130,11 @@ filter_prompt_template = PromptTemplate(
     template="""
 You are a real estate assistant that you need to analyse the user query and find those columns that needs filter of greater than or lesser than 
 
+**Instructions:**
+- For each field, only use "Greater than" or "Lesser than" if the query asks for a comparison (e.g., more than, less than, above, under).
+- Never use numbers or other values for these fields.
+- If no comparison is needed for a field, set its value to null.
+
 
 Extract the following information and return it in the correct format:
 
