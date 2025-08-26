@@ -1,86 +1,208 @@
-import re
 import os
-from llm_models import deepseek_model
-from parser_and_prompts import query_generate_prompt,search_prompt_template,filter_prompt_template,search_parser,filter_column_parser
-import pandas as pd 
+from typing import Any, Dict, List, Optional, Union
+import pandas as pd
 from dotenv import load_dotenv
+
+# LLM only for parsing user query → search_data + comparison operators
+from llm_models import deepseek_model,llama_model
+from parser_and_prompts import (
+    search_prompt_template,
+    filter_prompt_template,
+    search_parser,
+    filter_column_parser,
+)
+
 load_dotenv()
+local_path = os.getenv("LOCAL_PATH")
 
 
-local_path=os.getenv("LOCAL_PATH")
- 
-# value_greater_or_lesser={
-#     "Price_in_Crore":'Greater than'
-# }
+# =========================
+# Parsers from LLM (unchanged)
+# =========================
 
-def get_filter_for_columns(user_query):
-    filter_chain=filter_prompt_template|deepseek_model|filter_column_parser
-    result=filter_chain.invoke({'user_query':user_query})
-    filter_on_column=result.model_dump(exclude_none=True)
-    # print(type(filter_on_column))
-    # print(filter_on_column)
-    return result
-    
-# get_filter_for_columns("Tell me flat under 5 Crore and Rate per sq meter more than 5000 with area more than 800 sq ft")
+def get_filter_for_columns(user_query: str):
+    """
+    Returns an ApplyFilterToColumn pydantic model (or equivalent) with
+    fields set to 'Greater than' / 'Lesser than' or None.
+    """
+    filter_chain = filter_prompt_template |llama_model | filter_column_parser
+    result = filter_chain.invoke({'user_query': user_query})
+    return result  # keep pydantic model; we handle model_dump later
 
-def make_query_and_fetch_result(df,columns,search_data,filter_on_columns):
-    
-    query_prompt = query_generate_prompt.format(columns=columns, search_data=search_data,value_greater_or_lesser=filter_on_columns)
-    result=deepseek_model.invoke(query_prompt).content
-    # print(f"LLM Response with COT:{result}")
 
-    # Extracting Dataframe query code 
-    match = re.search(r"```python\n(.*?)```", result, re.DOTALL)
-    if match:
-        query_code = match.group(1).strip()
-        print("Extracted Query:\n", query_code)
-    else:
-        print("No query code found.")
+def get_search_data(user_query: str) -> Dict[str, Any]:
+    """
+    Returns a dict of extracted search values based on the user's query.
+    Values may be singular or lists (for ranges).
+    """
+    search_chain = search_prompt_template |llama_model| search_parser
+    result = search_chain.invoke(user_query)
+    return result.model_dump(exclude_none=True)
 
-   # Querying the DataFrame
+
+# =========================
+# Manual deterministic filtering
+# =========================
+
+NUMERIC_COLS = {
+    "Price_in_Crore",
+    "Rate_rs_sqft",
+    "Area_in_sq_meter",
+    "bedRoom",
+    "bathroom",
+    "balcony",
+    "floorNum",
+    "Totalfloor",
+}
+
+ENUM_COLS = {
+    "AreaType",        # AreaTypeEnum values like "Carpet", "Built Up", "Super Built up"
+    "facing",          # FacingDirection enum values
+    "additionalRoom",  # AdditionalRoomType strings / combos
+}
+
+TEXT_COLS = {
+    "colony_or_sector",
+    "City",
+    "Country",
+    # Add 'society' here if present in your CSV
+}
+
+
+def _normalize_series_str(s: pd.Series) -> pd.Series:
+    return s.astype(str).str.strip().str.casefold()
+
+
+def _normalize_value_str(v: Any) -> str:
+    return str(v).strip().casefold()
+
+
+def _ensure_list(v: Any) -> List[Any]:
+    if v is None:
+        return []
+    return v if isinstance(v, list) else [v]
+
+
+def _apply_numeric_filter(
+    df: pd.DataFrame,
+    col: str,
+    value: Optional[Union[int, float, List[Union[int, float]]]],
+    comparator: Optional[str],  # "Greater than" | "Lesser than" | None
+) -> pd.DataFrame:
+    if value is None or col not in df.columns:
+        return df
+
+    if isinstance(value, list):
+        vals = [x for x in value if x is not None]
+        if len(vals) == 0:
+            return df
+        if len(vals) >= 2 and comparator is None:
+            lo, hi = min(vals), max(vals)
+            return df[df[col].between(lo, hi)]
+        # fall through with single value
+        value = vals[0]
+
+    # Single numeric value
     try:
-        filtered_df = eval(query_code, {"df": df})
-        print(len(filtered_df))
-        print("Filtered DataFrame:\n", filtered_df)
-        return filtered_df
-    except Exception as e:
-        print("Error while evaluating query:", e)
-        return None
+        series = pd.to_numeric(df[col], errors="coerce")
+    except Exception:
+        series = df[col]
+
+    if comparator == "Greater than":
+        return df[series >= value]
+    elif comparator == "Lesser than":
+        return df[series <= value]
+    else:
+        return df[series == value]
 
 
-# make_query(df,fields)
+def _apply_categorical_filter(
+    df: pd.DataFrame,
+    col: str,
+    value: Optional[Union[str, List[str]]],
+) -> pd.DataFrame:
+    if value is None or col not in df.columns:
+        return df
 
-def get_search_data(user_query):
-    search_chain=search_prompt_template|deepseek_model|search_parser
-    result=search_chain.invoke(user_query)
-    search_data=result.model_dump(exclude_none=True)
-    # print(search_data)
-    return search_data
+    series_norm = _normalize_series_str(df[col])
+    values = _ensure_list(value)
+    if len(values) == 0:
+        return df
+
+    norm_values = {_normalize_value_str(v) for v in values}
+    mask = series_norm.isin(norm_values)
+    return df[mask]
 
 
-# get_search_data("Find a flat of 3bhk with 2 balocies and with Servent room")
+def _apply_enum_filter(
+    df: pd.DataFrame,
+    col: str,
+    value: Optional[Union[str, List[str]]],
+) -> pd.DataFrame:
+    # Enums typically stored as strings in the CSV
+    return _apply_categorical_filter(df, col, value)
 
-def run_csv_agent(fields, df, search_data, filter_on_columns):
-    # df is already loaded and passed in
-    if fields['top_floor'] == True:
-        df = df[df['Totalfloor'] == df['floorNum']]
-        print(df.head())
 
-    columns = []
-    for key in fields:
-        if key == 'top_floor':
+def filter_dataframe_manual(
+    df: pd.DataFrame,
+    fields: Dict[str, bool],
+    search_data: Dict[str, Any],
+    filter_on_columns_model: Any,  # ApplyFilterToColumn pydantic model or dict
+) -> pd.DataFrame:
+    """
+    Deterministically filter `df` using:
+      - `fields`: which columns the user cares about (bool flags, including optional 'top_floor')
+      - `search_data`: values to filter on (single or list/range)
+      - `filter_on_columns_model`: per-column comparator ('Greater than' / 'Lesser than') for numeric fields
+    """
+    df_filtered = df.copy()
+
+    # Convert pydantic model -> dict if needed
+    if hasattr(filter_on_columns_model, "model_dump"):
+        filter_on_columns = filter_on_columns_model.model_dump(exclude_none=True)
+    elif isinstance(filter_on_columns_model, dict):
+        filter_on_columns = {k: v for k, v in filter_on_columns_model.items() if v is not None}
+    else:
+        filter_on_columns = {}
+
+    # 1) Handle top-floor first if requested
+    if fields.get("top_floor", False):
+        if "Totalfloor" in df_filtered.columns and "floorNum" in df_filtered.columns:
+            df_filtered = df_filtered[df_filtered["Totalfloor"] == df_filtered["floorNum"]]
+
+    # 2) Apply filters only for fields explicitly marked True (except top_floor handled above)
+    for key, enabled in fields.items():
+        if not enabled or key == "top_floor":
             continue
-        if fields[key] == True:
-            columns.append(key)
 
-    print(columns)
+        value = search_data.get(key, None)
+        comparator = filter_on_columns.get(key, None)
 
-    result = make_query_and_fetch_result(df, columns, search_data, filter_on_columns)
-    if result is None and fields['top_floor'] == True and columns == []:
-        result = df
+        if key in NUMERIC_COLS and key in df_filtered.columns:
+            df_filtered = _apply_numeric_filter(df_filtered, key, value, comparator)
 
-    print(result)
+        elif key in ENUM_COLS and key in df_filtered.columns:
+            df_filtered = _apply_enum_filter(df_filtered, key, value)
+
+        elif key in TEXT_COLS and key in df_filtered.columns:
+            df_filtered = _apply_categorical_filter(df_filtered, key, value)
+
+        # Early exit if empty
+        if df_filtered.empty:
+            break
+
+    return df_filtered
+
+
+def run_csv_agent(
+    fields: Dict[str, bool],
+    df: pd.DataFrame,
+    search_data: Dict[str, Any],
+    filter_on_columns: Any,
+) -> pd.DataFrame:
+    """
+    Manual, deterministic filtering. No LLM query generation/eval.
+    `df` is a pandas DataFrame already loaded by the caller.
+    """
+    result = filter_dataframe_manual(df, fields, search_data, filter_on_columns)
     return result
-
-# user_query=input("Enter Your Query")
-# run_csv_agent({'Price_in_Crore':True},"dataset/property_dataset_new.csv",get_search_data("Give me a flat more than 1.5 Crore"))

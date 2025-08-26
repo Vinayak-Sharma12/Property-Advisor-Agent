@@ -1,13 +1,15 @@
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
-from models import Intent,FieldToSearch,SearchData,ApplyFilterToColumn
+from models import Intent,FieldToSearch,SearchData,ApplyFilterToColumn,YesNoResults
 
 
 
 search_parser=PydanticOutputParser(pydantic_object=SearchData)
 intent_parser=PydanticOutputParser(pydantic_object=Intent)
-field_to_set_parser=PydanticOutputParser(pydantic_object=FieldToSearch)
+field_to_set_parser=PydanticOutputParser(pydantic_object=FieldToSearch) 
 filter_column_parser=PydanticOutputParser(pydantic_object=ApplyFilterToColumn)
+yes_no_parser = PydanticOutputParser(pydantic_object=YesNoResults)
+
 
 intent_prompt = PromptTemplate(
     template="""
@@ -159,3 +161,134 @@ User Query: "{user_query}"
     input_variables=["user_query"]
 )
 
+
+
+
+
+hybrid_query_maker_prompt = PromptTemplate(
+    template="""
+You are a professional and friendly real estate assistant. Your task is to **reform the user's query** so that it focuses **only** on these aspects of a flat:
+
+- Nearby locations  
+- Features (e.g., Fire Alarm, Swimming Pool, Park, Lift)  
+- Furnishing details (e.g., Wardrobe, Exhaust Fan, Modular Kitchen, Microwave, Geyser, ACs)  
+- General description of the flat  
+
+Do **not** include or ask about: price, area, area type, exact address, floor number, or total floors or BHK or bedrooms or bathrooms or balconies or additional room or no side facing or sector or society,city,country .  
+
+Strict rules:
+1. Only use information present in the original user query.  
+2. Do **not** add any extra information, assumptions, or commentary.  
+3. Output **only the reformulated query in a single line**.  
+4. If the original query contains no relevant information related to the above aspects, output exactly: "No_User_Query".  
+5. Do not include quotes, formatting, or any explanations in the output.
+
+Original User Query: "{user_query}"
+
+Examples"
+1.
+User Query: "Looking for a 3BHK flat near a school with swimming pool and lift, fully furnished."
+Reformed Query: "A flat near a school with swimming pool and lift."
+
+2.
+User Query: "Need a flat near McDonald's with ACs, wardrobe, and modular kitchen."
+Reformed Query: "A flat near McDonald's with ACs, wardrobe, and modular kitchen."
+
+3.
+User Query: "Tell me flats in Mumbai, 1200 sq.ft, semi-furnished with geyser and exhaust fan."
+Reformed Query: "A flat in Mumbai with geyser and exhaust fan."
+
+4.
+User Query: "Any 2BHK apartments with park, lift, and fire alarm?"
+Reformed Query: "A flat with park, lift, and fire alarm."
+
+5.
+User Query: "Looking for a flat fully furnished with microwave, ACs, and wardrobe, near a shopping mall."
+Reformed Query: "A flat with microwave, ACs, and wardrobe near a shopping mall."
+
+6.
+User Query: "I want a flat in Pune with balcony, lift, and modular kitchen, priced under 70 lakhs."
+Reformed Query: "A flat in  with balcony, lift, and modular kitchen."
+
+7.
+User Query: "Tell me flats with swimming pool and park nearby."
+Reformed Query: "A flat with swimming pool and park nearby."
+
+8.
+User Query: "Looking for a flat near metro station with ACs, wardrobe, and geyser."
+Reformed Query: "A flat near metro station having  ACs, wardrobe, and geyser."
+
+9.
+User Query: "I want a 1BHK flat under 5 crore sea side facing  with fire alarm and lift, on 2nd floor."
+Reformed Query: "A fully furnished flat with fire alarm and lift."
+
+10.
+User Query: "Need a flat with park, swimming pool, lift, and ACs."
+Reformed Query: "A flat with park, swimming pool, lift, and ACs."
+
+11.
+User Query: "Looking for a flat near office, semi-furnished with microwave and geyser, no preference for floor."
+Reformed Query: "A semi-furnished flat near office with microwave and geyser."
+
+12.
+User Query: "I want a flat near a hospital with modular kitchen, ACs, and wardrobe."
+Reformed Query: "A flat near a hospital with modular kitchen, ACs, and wardrobe."
+
+13.
+User Query: "Show me flats with swimming pool, gym, and park."
+Reformed Query: "A flat with swimming pool, gym, and park."
+
+14.
+User Query: "Tell me 3BHK flats with lift, balcony, and fire alarm, near a school."
+Reformed Query: "A flat with lift, balcony, and fire alarm near a school."
+
+15.
+User Query: "Looking for a flat near McDonald's or Starbucks, fully furnished with ACs and geyser."
+Reformed Query: "A fully furnished flat near McDonald's or Starbucks with ACs and geyser."
+
+16.
+User Query: "I want a flat near park and metro, with modular kitchen and microwave, ignore floor or price."
+Reformed Query: "A flat near park and metro with modular kitchen and microwave."
+
+17.
+User Query: "Any flats near a shopping mall with swimming pool, lift, ACs, and wardrobe?"
+Reformed Query: "A flat near a shopping mall with swimming pool, lift, ACs, and wardrobe."
+
+18.
+User Query: "Looking for a flat in Bangalore having  fire alarm facility and geyser included."
+Reformed Query: "A flat  with fire alarm and geyser."
+
+19.
+User Query: "Flats near hospital or school with park, lift, and ACs."
+Reformed Query: "A flat near hospital or school with park, lift, and ACs."
+
+20.
+User Query: "I want a flat with swimming pool, gym, and park, no need to mention BHK or price."
+Reformed Query: "A flat with swimming pool, gym, and park."
+Reformed Query:
+""",
+    input_variables=["user_query"]
+)
+
+yes_no_prompt = PromptTemplate(
+    template="""
+You are an assistant that evaluates document chunks against a user query.
+
+Task
+- For each chunk, decide if it is relevant to answering the user query correctly and stictly.
+- If the chunk is relevant or contains information that answer the query → "Yes".
+- Otherwise → "No".
+- Return exactly one decision per chunk, preserving the given chunk_id values.
+- Do not add extra fields or commentary.
+
+{format_instructions}
+
+User Query:
+{user_query}
+
+Document Chunks:
+{document_text}
+""".strip(),
+    input_variables=["user_query", "document_text"],
+    partial_variables={"format_instructions": yes_no_parser.get_format_instructions()},
+)

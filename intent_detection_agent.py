@@ -3,7 +3,7 @@ from parser_and_prompts import intent_prompt,intent_response_prompt
 from parser_and_prompts import intent_parser
 
 def find_intent(user_query):
-    intent_chain=intent_prompt|deepseek_model|intent_parser
+    intent_chain=intent_prompt|llama_model|intent_parser
     intent=intent_chain.invoke({'user_query':user_query})
     return intent
 
