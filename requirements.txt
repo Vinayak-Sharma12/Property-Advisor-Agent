@@ -3,3 +3,9 @@ dotenv
 langchain_groq
 pandas 
 streamlit 
+langchain_community
+pinecone
+torch
+sentence-transformers
+pinecone_text
+langchain_huggingface
