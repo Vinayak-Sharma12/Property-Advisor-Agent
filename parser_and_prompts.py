@@ -52,6 +52,7 @@ Instructions:
 - Do not infer fields unless there is strong context.
 - Respond strictly in the format below — return only a valid JSON as per the specified schema, without any natural language explanation or additional output.
 
+#Note -- For AdditionalRoom make only it True when user query involve store/study/servant/pooja room or their combination.
 User Query:
 {user_query}
 
@@ -107,6 +108,7 @@ Your job is to identify and extract:
 - City names mentioned in the query.
 -Society or colony or residency name mentioned  and convert it to lower case
 - Country name mentioned in the query.
+- #Note --For AdditionalRoom Extract  only  when user query involve store/study/servant/pooja room.
 
 **Extraction Rules:**
 1. **Always take numeric values exactly as stated in the query.**
@@ -116,6 +118,8 @@ Your job is to identify and extract:
    - Query: "more than one balcony" → Extract: `balcony = 1`  
 4. Do not convert words to numbers unless explicitly given (e.g., "two bedrooms" → `bedrooms = 2` is acceptable).
 5. Do not make assumptions about missing data.
+
+
 
 **Output Format:**  
 Return the output strictly in this format:  

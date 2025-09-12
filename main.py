@@ -9,14 +9,33 @@ from csv_agent import run_csv_agent, get_search_data, get_filter_for_columns
 from query_for_hybrid import query_maker_hybrid
 from hybrid_search import hybrid_search_in_property, build_retriever
 
+# ------------------------------------------------------
 # Build retriever once (cached outside async function)
-retriever = build_retriever()
+# ------------------------------------------------------
+try:
+    retriever = build_retriever()
+    print("[INFO] Retriever built successfully.")
+except Exception as e:
+    retriever = None
+    print(f"[WARN] build_retriever() failed at import: {e!r}. Hybrid disabled.")
 
+
+def _no_hybrid(q: str) -> bool:
+    """Helper: decide if hybrid query should be skipped."""
+    if not q:
+        return True
+    q = str(q).strip()
+    return q in {"", "No_User_Query", "N/A", "None"}
+
+
+# ------------------------------------------------------
+# Main Orchestration Workflow
+# ------------------------------------------------------
 async def async_workflow(user_query: str, df1: pd.DataFrame) -> Dict[str, Any]:
     """
     Orchestrates intent detection, field selection, hybrid search, and
     deterministic CSV filtering in parallel.
-    `df1` must be a pandas DataFrame (not a file path).
+    Returns a dict with a `result_type` and a `final_df` if property-related.
     """
     timings: Dict[str, float] = {}
 
@@ -31,28 +50,29 @@ async def async_workflow(user_query: str, df1: pd.DataFrame) -> Dict[str, Any]:
     intent, fields, hybrid_query = await asyncio.gather(
         intent_task, fields_task, hybrid_query_task
     )
+    print(fields)
     timings["intent_fields_hybridQuery"] = time.time() - start
-    print("\n--- Step 1 Results ---")
-    print("Intent:", intent)
-    print("Fields:", fields)
-    print("Hybrid Query:", hybrid_query)
+    print("[INFO] Intent, Fields, and Hybrid Query computed.")
+
+    property_related = bool(getattr(intent, "Property_Related", False))
 
     # ------------------------
     # Property-related flow
     # ------------------------
-    if getattr(intent, "Property_Related", False):
-        if hybrid_query == "No_User_Query":
+    if property_related:
+        # Case A: Hybrid query unusable or retriever unavailable
+        if retriever is None or _no_hybrid(hybrid_query):
             # Step 2: CSV preprocessing (search_data + filter comparators)
             start = time.time()
             search_data_task = asyncio.to_thread(get_search_data, user_query)
+
             filter_task = asyncio.to_thread(get_filter_for_columns, user_query)
             search_data, filter_on_columns = await asyncio.gather(
                 search_data_task, filter_task
             )
             timings["csvPreproc"] = time.time() - start
-            print("\n--- Step 2 Results (CSV-only branch) ---")
-            print("Search Data:", search_data)
-            print("Filter on Columns:", filter_on_columns)
+            print(search_data)
+            print("[INFO] Search data & filter-on-columns ready (CSV-only branch).")
 
             # Step 3: Deterministic CSV filter
             start = time.time()
@@ -60,18 +80,19 @@ async def async_workflow(user_query: str, df1: pd.DataFrame) -> Dict[str, Any]:
                 run_csv_agent, fields.model_dump(), df1, search_data, filter_on_columns
             )
             timings["csv_agent"] = time.time() - start
-            print("\n--- Step 3 Results (CSV-only branch) ---")
-            print("CSV Result:", csv_result)
+            print("[INFO] CSV agent (manual filtering) done (CSV-only branch).")
 
-            print("\nTimings (seconds):", timings)
             return {
+                "result_type": "property",
+                "final_df": csv_result,      # <- final DataFrame is just CSV result
                 "csv_result": csv_result,
-                "hybrid_result": [],  # no hybrid search performed
+                "hybrid_result": [],
                 "timings": timings,
             }
 
-        # Otherwise, run hybrid search in background while doing CSV work.
-        print("\nHybrid Working...")
+        # Case B: Hybrid query usable
+        print("[INFO] Hybrid Working...")
+        # Step 2: Kick off hybrid search in background
         hybrid_task = asyncio.create_task(
             asyncio.to_thread(hybrid_search_in_property, hybrid_query, retriever)
         )
@@ -84,9 +105,10 @@ async def async_workflow(user_query: str, df1: pd.DataFrame) -> Dict[str, Any]:
             search_data_task, filter_task
         )
         timings["csvPreproc"] = time.time() - start
-        print("\n--- Step 3 Results ---")
-        print("Search Data:", search_data)
-        print("Filter on Columns:", filter_on_columns)
+        print("[INFO] Search data & filter-on-columns ready.")
+
+        print("[DEBUG] search_data:", search_data)
+        print("[DEBUG] filter_on_columns:", filter_on_columns)
 
         # Step 4: Deterministic CSV filter
         start = time.time()
@@ -94,20 +116,36 @@ async def async_workflow(user_query: str, df1: pd.DataFrame) -> Dict[str, Any]:
             run_csv_agent, fields.model_dump(), df1, search_data, filter_on_columns
         )
         timings["csv_agent"] = time.time() - start
-        print("\n--- Step 4 Results ---")
-        print("CSV Result:", csv_result)
+        print("[INFO] CSV agent (manual filtering) done.")
 
         # Step 5: Await hybrid result
         start = time.time()
         hybrid_result = await hybrid_task
         timings["hybrid_agent"] = time.time() - start
-        print("\n--- Step 5 Results ---")
-        print("Hybrid Result:", hybrid_result)
+        print("[INFO] Hybrid Agent Done.")
+        
 
-        print("\nTimings (seconds):", timings)
+        # After awaiting hybrid_result
+        used_hybrid = True  # we’re in the hybrid branch
+
+        final_df = csv_result
+        if used_hybrid:
+            if isinstance(hybrid_result, list) and len(hybrid_result) > 0:
+                if "property_id" in csv_result.columns:
+                    hybrid_ids = {str(i) for i in hybrid_result}
+                    final_df = csv_result[csv_result["property_id"].astype(str).isin(hybrid_ids)]
+                else:
+                    print("[WARN] property_id missing; forcing empty due to strict intersection.")
+                    final_df = csv_result.iloc[0:0]
+            else:
+                # hybrid ran but found nothing → strict empty
+                final_df = csv_result.iloc[0:0]
+
         return {
+            "result_type": "property",
+            "final_df": final_df,           # <- unified DataFrame
             "csv_result": csv_result,
-            "hybrid_result": hybrid_result,
+            "hybrid_result": hybrid_result, # raw hybrid list for debugging
             "timings": timings,
         }
 
@@ -117,8 +155,10 @@ async def async_workflow(user_query: str, df1: pd.DataFrame) -> Dict[str, Any]:
     start = time.time()
     result = await asyncio.to_thread(intent_response_agent, user_query)
     timings["intent_response_agent"] = time.time() - start
-    print("\n--- Non-property-related Result ---")
-    print("Response:", result)
 
-    print("\nTimings (seconds):", timings)
-    return {"result": result, "timings": timings}
+    print("[INFO] Non-property flow timings (seconds):", timings)
+    return {
+        "result_type": "chat",
+        "result": result,
+        "timings": timings,
+    }

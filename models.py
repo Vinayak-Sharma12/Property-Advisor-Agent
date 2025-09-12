@@ -20,7 +20,7 @@ class FieldToSearch(BaseModel):
     bedRoom: bool = Field(..., description="Is the number of bedrooms or BHK mentioned?")
     bathroom: bool = Field(..., description="Does the query include details about bathrooms?")
     balcony: bool = Field(..., description="Is there a mention of balconies?")
-    additionalRoom: bool = Field(..., description="Are extra rooms (servant/study/store) discussed/asked? Nothing else can be consider as Additional room")
+    additionalRoom: bool = Field(..., description="Does the user want to Study or Servant or Store or Pooja Room.If any other type room mentioned return false.")
     address: bool = Field(..., description="Is the location or full address part of the query?")
     floorNum: bool = Field(..., description="Does the query talk about the floor(exlude top floor query)")
     Totalfloor: bool = Field(..., description="Does the query talk about total floors?(exclude top floor query)")
@@ -90,7 +90,7 @@ class SearchData(BaseModel):
     bathroom: Optional[Union[int, List[int]]] = Field(None, description="Number of bathrooms mentioned")
     balcony: Optional[Union[int, List[int]]] = Field(None, description="Number of balconies mentioned")
 
-    additionalRoom: Optional["AdditionalRoomType"] = Field(None, description="Can only be Store,Servant,Pooja Room or their combination Nothing else")
+    additionalRoom: Optional["AdditionalRoomType"] = Field(None, description="Can only be Store,Servant,Study,Pooja Room or their combination Nothing else")
 
     floorNum: Optional[Union[int, List[int]]] = Field(None, description="Floor number if mentioned")
     Totalfloor: Optional[Union[int, List[int]]] = Field(None, description="Total floors in the building if mentioned")
