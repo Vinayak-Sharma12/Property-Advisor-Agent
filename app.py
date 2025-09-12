@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import asyncio
 import os
+import re
 import ast
 from langchain_community.document_loaders import CSVLoader
 
@@ -17,6 +18,22 @@ def load_data():
     return pd.DataFrame([{"property_id": d.metadata["property_id"], "description": d.page_content} for d in docs])
 
 df = load_data()
+# Build a fast lookup from property_id -> description (from df)
+try:
+    _desc_by_id = {str(r["property_id"]): r.get("description", "") for _, r in df.iterrows()}
+except Exception:
+    _desc_by_id = {}
+
+# Helper to clean odd prefixes like "90:" or "Description:"
+def _clean_description(text: str) -> str:
+    if text is None:
+        return ""
+    s = str(text).strip()
+    # Remove leading colon/dash and numbers like ": 90" or "90"
+    s = re.sub(r'^\s*[:\-]*\s*\d+\s*', '', s)
+    # Remove leading "Description:" label (case-insensitive)
+    s = re.sub(r'^description\s*[:\-]*\s*', '', s, flags=re.IGNORECASE)
+    return s.strip()
 
 @st.cache_data
 def csv_load_data():
@@ -281,8 +298,30 @@ if st.session_state.search_df is not None:
                 unsafe_allow_html=True,
             )
 
-            # Description
-            description_html = str(row.get("Description", "N/A"))
+            # Description: combine df (by property_id) and row's Description if both exist
+            _prop_id = str(row.get("property_id", "")).strip()
+            raw_df_desc = _desc_by_id.get(_prop_id)
+            raw_row_desc = row.get("Description", row.get("description", ""))
+            cleaned_parts = []
+            # Clean ONLY the df description (remove leading numbers/labels)
+            if raw_df_desc is not None and str(raw_df_desc).strip():
+                cleaned_df_desc = _clean_description(raw_df_desc)
+                if cleaned_df_desc:
+                    cleaned_parts.append(cleaned_df_desc)
+            # Keep the row description AS-IS (except trimming whitespace)
+            if raw_row_desc is not None and str(raw_row_desc).strip():
+                cleaned_parts.append(str(raw_row_desc).strip())
+            # Deduplicate while preserving order
+            seen = set()
+            unique_parts = []
+            for p in cleaned_parts:
+                if p not in seen:
+                    unique_parts.append(p)
+                    seen.add(p)
+            if unique_parts:
+                description_html = "<br><br>".join(unique_parts)
+            else:
+                description_html = "N/A"
             st.markdown(
                 f"""
                 <div style="border:1px solid #2a2a2a; background:#101010; border-radius:12px; padding:16px; margin-top:16px;">
