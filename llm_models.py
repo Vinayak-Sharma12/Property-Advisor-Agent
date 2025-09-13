@@ -1,7 +1,13 @@
 from langchain_groq import ChatGroq
-from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
 import os
+
+# Optional import for Mistral
+try:
+    from langchain_mistralai import ChatMistralAI
+    MISTRAL_AVAILABLE = True
+except ImportError:
+    MISTRAL_AVAILABLE = False
 
 load_dotenv()
 
@@ -27,10 +33,12 @@ def get_llama_model():
 
 def get_mistral_model():
     """Get mistral model with proper API key handling"""
+    if not MISTRAL_AVAILABLE:
+        raise ImportError("langchain-mistralai package is not installed")
     api_key = os.getenv("MISTRAL_API_KEY")
     if not api_key:
         raise ValueError("MISTRAL_API_KEY environment variable is required")
-    return init_chat_model("open-mixtral-8x7b", model_provider="mistralai", api_key=api_key)
+    return ChatMistralAI(model="open-mixtral-8x7b", api_key=api_key)
 
 # Initialize models lazily
 deepseek_model = None
@@ -43,7 +51,7 @@ def initialize_models():
     try:
         deepseek_model = get_deepseek_model()
         llama_model = get_llama_model()
-        if os.getenv("MISTRAL_API_KEY"):
+        if MISTRAL_AVAILABLE and os.getenv("MISTRAL_API_KEY"):
             model = get_mistral_model()
     except Exception as e:
         print(f"Warning: Could not initialize models: {e}")

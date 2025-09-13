@@ -49,9 +49,17 @@ st.title("Property Advisor Agent")
 # Sidebar: API Keys
 with st.sidebar:
     st.subheader("API Keys")
-    groq_key = st.text_input("GROQ API Key", type="password", value=os.getenv("GROQ_API_KEY", ""))
-    mistral_key = st.text_input("Mistral API Key (optional)", type="password", value=os.getenv("MISTRAL_API_KEY", ""))
-    pinecone_key = st.text_input("Pinecone API Key (optional)", type="password", value=os.getenv("PINECONE_API_KEY", ""))
+    
+    # Clear any existing API keys from environment for security
+    if "api_keys_cleared" not in st.session_state:
+        os.environ.pop("GROQ_API_KEY", None)
+        os.environ.pop("MISTRAL_API_KEY", None)
+        os.environ.pop("PINECONE_API_KEY", None)
+        st.session_state.api_keys_cleared = True
+    
+    groq_key = st.text_input("GROQ API Key", type="password", value="")
+    mistral_key = st.text_input("Mistral API Key (optional)", type="password", value="")
+    pinecone_key = st.text_input("Pinecone API Key (optional)", type="password", value="")
     
     if groq_key:
         os.environ["GROQ_API_KEY"] = groq_key
@@ -67,11 +75,6 @@ except ImportError as e:
     st.error(f"Failed to import main module: {e}")
     st.stop()
 
-query = st.text_input("Enter your query:")
-
-# Tabs for view
-tabs = st.tabs(["📋 Cards", "📊 Table", "🎨 Beautiful Grid"])
-
 # ---------------------------
 # State management
 # ---------------------------
@@ -82,28 +85,36 @@ if "selected_property" not in st.session_state:
 if "search_df" not in st.session_state:
     st.session_state.search_df = None
 
+# Always show search interface
+st.subheader("🔍 Search Properties")
+query = st.text_input("Enter your query:", key="search_query")
+
 if not os.getenv("GROQ_API_KEY"):
     st.info("Enter your GROQ API key in the sidebar to enable search.")
+else:
+    search_clicked = st.button("Search", type="primary")
 
-if st.button("Search") and query.strip() and os.getenv("GROQ_API_KEY"):
-    with st.spinner("Processing your query..."):
-        result = asyncio.run(async_workflow(query, df1))
+    if search_clicked and query.strip():
+        with st.spinner("Processing your query..."):
+            result = asyncio.run(async_workflow(query, df1))
 
-    if isinstance(result, dict) and result.get("result_type") == "property":
-        st.session_state.search_df = result["final_df"]
-        st.session_state.page = "home"
-    elif isinstance(result, dict) and result.get("result_type") == "chat":
-        st.subheader("Answer")
-        st.write(result["result"])
-
-    else:
-        st.write(result)
+        if isinstance(result, dict) and result.get("result_type") == "property":
+            st.session_state.search_df = result["final_df"]
+            st.session_state.page = "home"
+        elif isinstance(result, dict) and result.get("result_type") == "chat":
+            st.subheader("Answer")
+            st.write(result["result"])
+        else:
+            st.write(result)
 
 # ---------------------------
 # Render Results (persist across reruns)
 # ---------------------------
 if st.session_state.search_df is not None:
     final_df = st.session_state.search_df
+    
+    # Tabs for view (only show if there are results)
+    tabs = st.tabs(["📋 Cards", "📊 Table", "🎨 Beautiful Grid"])
 
     if st.session_state.page == "home":
         # ✅ Cards View
