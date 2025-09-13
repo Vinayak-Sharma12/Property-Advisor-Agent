@@ -13,8 +13,15 @@ from parser_and_prompts import (
 )
 
 load_dotenv()
-local_path = os.getenv("LOCAL_PATH")
 
+
+# Assuming your repo structure:
+# ├── app.py
+# ├── dataset/
+# │   └── properties.csv
+
+CSV_PATH = os.path.join("dataset", "property_dataset_with_beautiful_description.csv")
+df = pd.read_csv(CSV_PATH)
 
 # =========================
 # Parsers from LLM (unchanged)
