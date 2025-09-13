@@ -4,7 +4,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 # LLM only for parsing user query → search_data + comparison operators
-from llm_models import deepseek_model,llama_model
+from llm_models import get_deepseek_model, initialize_models
 from parser_and_prompts import (
     search_prompt_template,
     filter_prompt_template,
@@ -32,6 +32,9 @@ def get_filter_for_columns(user_query: str):
     Returns an ApplyFilterToColumn pydantic model (or equivalent) with
     fields set to 'Greater than' / 'Lesser than' or None.
     """
+    # Initialize models if not already done
+    initialize_models()
+    deepseek_model = get_deepseek_model()
     filter_chain = filter_prompt_template |deepseek_model| filter_column_parser
     result = filter_chain.invoke({'user_query': user_query})
     return result  # keep pydantic model; we handle model_dump later
@@ -42,6 +45,9 @@ def get_search_data(user_query: str) -> Dict[str, Any]:
     Returns a dict of extracted search values based on the user's query.
     Values may be singular or lists (for ranges).
     """
+    # Initialize models if not already done
+    initialize_models()
+    deepseek_model = get_deepseek_model()
     search_chain = search_prompt_template |deepseek_model| search_parser
     result = search_chain.invoke(user_query)
     return result.model_dump(exclude_none=True)

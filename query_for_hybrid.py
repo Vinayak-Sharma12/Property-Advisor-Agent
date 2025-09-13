@@ -1,7 +1,10 @@
 from parser_and_prompts import hybrid_query_maker_prompt
-from llm_models import deepseek_model,llama_model
+from llm_models import get_deepseek_model, initialize_models
 
 def query_maker_hybrid(user_query):
+    # Initialize models if not already done
+    initialize_models()
+    deepseek_model = get_deepseek_model()
     llm=hybrid_query_maker_prompt|deepseek_model
     result=llm.invoke(user_query)
     result=result.content

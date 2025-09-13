@@ -14,7 +14,10 @@ from hybrid_search import hybrid_search_in_property, build_retriever
 # ------------------------------------------------------
 try:
     retriever = build_retriever()
-    print("[INFO] Retriever built successfully.")
+    if retriever is not None:
+        print("[INFO] Retriever built successfully.")
+    else:
+        print("[INFO] Retriever not available (Pinecone dependencies missing).")
 except Exception as e:
     retriever = None
     print(f"[WARN] build_retriever() failed at import: {e!r}. Hybrid disabled.")

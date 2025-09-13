@@ -49,15 +49,23 @@ st.title("Property Advisor Agent")
 # Sidebar: API Keys
 with st.sidebar:
     st.subheader("API Keys")
-    groq_key = st.text_input("GROQ API Key", type="password")
-    mistral_key = st.text_input("Mistral API Key (optional)", type="password")
+    groq_key = st.text_input("GROQ API Key", type="password", value=os.getenv("GROQ_API_KEY", ""))
+    mistral_key = st.text_input("Mistral API Key (optional)", type="password", value=os.getenv("MISTRAL_API_KEY", ""))
+    pinecone_key = st.text_input("Pinecone API Key (optional)", type="password", value=os.getenv("PINECONE_API_KEY", ""))
+    
     if groq_key:
         os.environ["GROQ_API_KEY"] = groq_key
     if mistral_key:
         os.environ["MISTRAL_API_KEY"] = mistral_key
+    if pinecone_key:
+        os.environ["PINECONE_API_KEY"] = pinecone_key
 
 # Import after keys are possibly set so models read fresh env vars
-from main import async_workflow
+try:
+    from main import async_workflow
+except ImportError as e:
+    st.error(f"Failed to import main module: {e}")
+    st.stop()
 
 query = st.text_input("Enter your query:")
 

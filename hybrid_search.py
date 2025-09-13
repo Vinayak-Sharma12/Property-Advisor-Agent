@@ -2,11 +2,18 @@ import os
 import torch
 from dotenv import load_dotenv
 import streamlit as st
-from pinecone import Pinecone
-from pinecone_text.sparse import BM25Encoder
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.document_loaders import CSVLoader
-from langchain_community.retrievers import PineconeHybridSearchRetriever
+
+# Optional imports for Pinecone functionality
+try:
+    from pinecone import Pinecone
+    from pinecone_text.sparse import BM25Encoder
+    from langchain_huggingface import HuggingFaceEmbeddings
+    from langchain_community.document_loaders import CSVLoader
+    from langchain_community.retrievers import PineconeHybridSearchRetriever
+    PINECONE_AVAILABLE = True
+except ImportError:
+    PINECONE_AVAILABLE = False
+    print("Warning: Pinecone dependencies not available. Hybrid search will be disabled.")
 
 # ---------------------------
 # Config
@@ -22,12 +29,16 @@ DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
 
 @st.cache_resource
 def load_docs():
+    if not PINECONE_AVAILABLE:
+        return []
     loader = CSVLoader(file_path=DATA_PATH, metadata_columns=["property_id"])
     return loader.load()
 
 
 @st.cache_resource
 def load_embeddings():
+    if not PINECONE_AVAILABLE:
+        return None
     return HuggingFaceEmbeddings(
         model_name="BAAI/bge-large-en-v1.5",
         model_kwargs={"device": DEVICE},
@@ -37,12 +48,16 @@ def load_embeddings():
 
 @st.cache_resource
 def load_index():
+    if not PINECONE_AVAILABLE:
+        return None
     pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
     return pc.Index(INDEX_NAME)
 
 
 @st.cache_resource
 def load_bm25():
+    if not PINECONE_AVAILABLE:
+        return None
     docs = load_docs()
     corpus = [d.page_content for d in docs]
     bm25 = BM25Encoder().default()
@@ -52,6 +67,8 @@ def load_bm25():
 
 @st.cache_resource
 def build_retriever():
+    if not PINECONE_AVAILABLE:
+        return None
     embeddings = load_embeddings()
     bm25 = load_bm25()
     index = load_index()
@@ -67,6 +84,9 @@ def build_retriever():
 
 # hybrid_search.py
 def hybrid_search_in_property(query: str, retriever):
+    if not PINECONE_AVAILABLE or retriever is None:
+        return []
+    
     results = retriever.invoke(query)
 
     document_text = "\n".join(
@@ -74,8 +94,11 @@ def hybrid_search_in_property(query: str, retriever):
     )
 
     from parser_and_prompts import yes_no_prompt, yes_no_parser
-    from llm_models import deepseek_model
+    from llm_models import get_deepseek_model, initialize_models
 
+    # Initialize models if not already done
+    initialize_models()
+    deepseek_model = get_deepseek_model()
     yes_no_model = yes_no_prompt | deepseek_model | yes_no_parser
     yes_no_result = yes_no_model.invoke({
         "user_query": query,
