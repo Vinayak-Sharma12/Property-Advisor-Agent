@@ -18,7 +18,7 @@ except ImportError:
 # ---------------------------
 # Config
 # ---------------------------
-DATA_PATH = "dataset/Real_description.csv"
+DATA_PATH = "dataset/Real_Description.csv"
 INDEX_NAME = "property-advisor-agent"
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"

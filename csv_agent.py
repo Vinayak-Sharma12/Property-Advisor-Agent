@@ -20,7 +20,7 @@ load_dotenv()
 # ├── dataset/
 # │   └── properties.csv
 
-CSV_PATH = os.path.join("dataset", "property_dataset_with_beautiful_description.csv")
+CSV_PATH = os.path.join("dataset", "real_property_data.csv")
 df = pd.read_csv(CSV_PATH)
 
 # =========================
