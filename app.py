@@ -6,7 +6,7 @@ import re
 import ast
 from langchain_community.document_loaders import CSVLoader
 
-DATA_PATH = "dataset/Description.csv"
+DATA_PATH = "dataset/Real_Description.csv"
 
 # ---------------------------
 # Load Data
@@ -37,7 +37,7 @@ def _clean_description(text: str) -> str:
 
 @st.cache_data
 def csv_load_data():
-    return pd.read_csv("dataset/property_dataset_with_beautiful_description.csv")
+    return pd.read_csv("/Users/slimshady/Documents/Property Advisor /Property-Advisor-Agent/dataset/real_property_data.csv")
 
 df1 = csv_load_data()
 
@@ -70,7 +70,7 @@ with st.sidebar:
 
 # Import after keys are possibly set so models read fresh env vars
 try:
-    from main import async_workflow
+    from workflow import async_workflow
 except ImportError as e:
     st.error(f"Failed to import main module: {e}")
     st.stop()

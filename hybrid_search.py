@@ -18,7 +18,7 @@ except ImportError:
 # ---------------------------
 # Config
 # ---------------------------
-DATA_PATH = "dataset/Description.csv"
+DATA_PATH = "dataset/Real_description.csv"
 INDEX_NAME = "property-advisor-agent"
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -77,7 +77,7 @@ def build_retriever():
         sparse_encoder=bm25,
         index=index,
         alpha=0.5,
-        top_k=10,
+        top_k=1000,
     )
     return retriever
 
@@ -97,17 +97,22 @@ def hybrid_search_in_property(query: str, retriever):
     from llm_models import get_deepseek_model, initialize_models
 
     # Initialize models if not already done
-    initialize_models()
-    deepseek_model = get_deepseek_model()
-    yes_no_model = yes_no_prompt | deepseek_model | yes_no_parser
-    yes_no_result = yes_no_model.invoke({
-        "user_query": query,
-        "document_text": document_text
-    })
+    # initialize_models()
+    # deepseek_model = get_deepseek_model()
+    # yes_no_model = yes_no_prompt | deepseek_model | yes_no_parser
+    # yes_no_result = yes_no_model.invoke({
+    #     "user_query": query,
+    #     "document_text": document_text
+    # })
 
     property_ids = []
-    for i, answer in enumerate(yes_no_result.decisions):
-        if answer == "Yes":
-            property_ids.append(results[i].metadata['property_id'])
+    for _, doc in enumerate(results):
+        pid = doc.metadata.get('property_id')
+        if pid:
+            property_ids.append(str(pid))
+
+    # for i, answer in enumerate(yes_no_result.decisions):
+    #     if answer == "Yes":
+    #         property_ids.append(results[i].metadata['property_id'])
 
     return property_ids

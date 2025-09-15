@@ -126,6 +126,7 @@ async def async_workflow(user_query: str, df1: pd.DataFrame) -> Dict[str, Any]:
         hybrid_result = await hybrid_task
         timings["hybrid_agent"] = time.time() - start
         print("[INFO] Hybrid Agent Done.")
+        print("[RESULT] Hybrid search property_ids:", hybrid_result)
         
 
         # After awaiting hybrid_result
@@ -136,13 +137,19 @@ async def async_workflow(user_query: str, df1: pd.DataFrame) -> Dict[str, Any]:
             if isinstance(hybrid_result, list) and len(hybrid_result) > 0:
                 if "property_id" in csv_result.columns:
                     hybrid_ids = {str(i) for i in hybrid_result}
+                    before_count = len(csv_result)
                     final_df = csv_result[csv_result["property_id"].astype(str).isin(hybrid_ids)]
+                    after_count = len(final_df)
+                    print(f"[DEBUG] CSV rows before intersection: {before_count}")
+                    print(f"[DEBUG] Hybrid ID count: {len(hybrid_ids)}")
+                    print(f"[DEBUG] Rows after intersection by property_id: {after_count}")
                 else:
                     print("[WARN] property_id missing; forcing empty due to strict intersection.")
                     final_df = csv_result.iloc[0:0]
             else:
                 # hybrid ran but found nothing → strict empty
                 final_df = csv_result.iloc[0:0]
+                print("[DEBUG] Hybrid returned no IDs; final result forced empty.")
 
         return {
             "result_type": "property",

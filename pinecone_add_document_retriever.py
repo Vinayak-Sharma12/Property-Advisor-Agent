@@ -12,7 +12,7 @@ device = "mps" if torch.backends.mps.is_available() else "cpu"
 print(device)
 
 #Load CSV
-loader = CSVLoader(file_path="/Users/slimshady/Documents/Property Advisor /Property-Advisor-Agent/dataset/Description.csv",metadata_columns=['property_id'])
+loader = CSVLoader(file_path="/Users/slimshady/Documents/Property Advisor /Property-Advisor-Agent/dataset/Real_Description.csv",metadata_columns=['property_id'])
 docs = loader.load()
 # print(docs[0])
 

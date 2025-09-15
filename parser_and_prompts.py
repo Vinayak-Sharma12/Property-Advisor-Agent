@@ -105,9 +105,10 @@ You are a real estate assistant that extracts **structured search filters** from
 
 Your job is to identify and extract:
 - Property attributes: price, area, number of bedrooms, bathrooms, balconies, floor information, etc.
-- City names mentioned in the query.
+- City names mentioned in the query(Can only be Bangalore,Pathankot,Gurgaon,Delhi).
 -Society or colony or residency name mentioned  and convert it to lower case
-- Country name mentioned in the query.
+- Country name mentioned in the query
+-- Near by shop or place name mentioned in the query if written as near or nearby or close to and fill it in nearbyLocations column
 - #Note --For AdditionalRoom Extract  only  when user query involve store/study/servant/pooja room.
 
 **Extraction Rules:**
@@ -118,6 +119,8 @@ Your job is to identify and extract:
    - Query: "more than one balcony" → Extract: `balcony = 1`  
 4. Do not convert words to numbers unless explicitly given (e.g., "two bedrooms" → `bedrooms = 2` is acceptable).
 5. Do not make assumptions about missing data.
+6. If written near or nearby or close to and extract the entity fill it in nearbyLocations column
+
 
 
 
@@ -186,6 +189,7 @@ Strict rules:
 3. Output **only the reformulated query in a single line**.  
 4. If the original query contains no relevant information related to the above aspects, output exactly: "No_User_Query".  
 5. Do not include quotes, formatting, or any explanations in the output.
+6. Don't add any city name in the query.
 
 Original User Query: "{user_query}"
 
@@ -243,7 +247,7 @@ User Query: "Show me flats with swimming pool, gym, and park."
 Reformed Query: "A flat with swimming pool, gym, and park."
 
 14.
-User Query: "Tell me 3BHK flats with lift, balcony, and fire alarm, near a school."
+User Query: "Tell me 3BHK flats with lift, balcony, and fire alarm, near a school in Delhi."
 Reformed Query: "A flat with lift, balcony, and fire alarm near a school."
 
 15.
@@ -255,11 +259,11 @@ User Query: "I want a flat near park and metro, with modular kitchen and microwa
 Reformed Query: "A flat near park and metro with modular kitchen and microwave."
 
 17.
-User Query: "Any flats near a shopping mall with swimming pool, lift, ACs, and wardrobe?"
+User Query: "Any flats near a shopping mall with swimming pool, lift, ACs, and wardrobe in Bangalore?"
 Reformed Query: "A flat near a shopping mall with swimming pool, lift, ACs, and wardrobe."
 
 18.
-User Query: "Looking for a flat in Bangalore having  fire alarm facility and geyser included."
+User Query: "Looking for a flat in Bangalore having  fire alarm facility and geyser included in Delhi."
 Reformed Query: "A flat  with fire alarm and geyser."
 
 19.
@@ -267,7 +271,12 @@ User Query: "Flats near hospital or school with park, lift, and ACs."
 Reformed Query: "A flat near hospital or school with park, lift, and ACs."
 
 20.
-User Query: "I want a flat with swimming pool, gym, and park, no need to mention BHK or price."
+User Query: "I want a flat with swimming pool, gym, and park, no need to mention BHK or price in Pathankot."
+Reformed Query: "A flat with swimming pool, gym, and park."
+Reformed Query:
+
+21.
+User Query: "I want a flat with swimming pool, gym, and park, no need to mention BHK or price in Pathankot."
 Reformed Query: "A flat with swimming pool, gym, and park."
 Reformed Query:
 """,

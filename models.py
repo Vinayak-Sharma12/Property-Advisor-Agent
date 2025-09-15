@@ -26,14 +26,14 @@ class FieldToSearch(BaseModel):
     Totalfloor: bool = Field(..., description="Does the query talk about total floors?(exclude top floor query)")
     facing: bool = Field(..., description="Is the direction of the property mentioned (e.g. East-facing)?")
     agePossession: bool = Field(..., description="Does the user ask for construction age or possession date?")
-    nearbyLocations: bool = Field(..., description="Does the user ask nearest to particular thing")
+    # nearbyLocations: bool = Field(..., description="Does the user ask nearest to particular thing")
 
 #     description: bool = Field(..., description="Is the user asking for a general description of the property?")
     furnishDetails: bool = Field(..., description="Is the furnishing (e.g. AC, wardrobe) mentioned?")
     # features: bool = Field(..., description="Are amenities or society features mentioned?")
     rating: bool = Field(..., description="Is there a reference to rating for environment, safety,LifeStyle,Connectivity etc.?")
     colony_or_sector:bool=Field(..., description="If the sector or colony or residency mention")
-    City:bool=Field(..., description="Is there a reference of City in the user query")
+    City:bool=Field(..., description="Is there a reference of City in the user query(For example Pathankot,Chandigarh,Mohali,Bangalore,Delhi,Gurgaon)")
     Country:bool=Field(...,description='Is there a reference of Country mentioned in the usery query')
     top_floor:bool=Field(...,Field='Does query is related to top floor')
 
