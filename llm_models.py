@@ -17,7 +17,7 @@ def get_deepseek_model():
     if not api_key:
         raise ValueError("GROQ_API_KEY environment variable is required")
     return ChatGroq(
-        model="deepseek-r1-distill-llama-70b",  
+        model="llama-3.3-70b-versatile",  
         api_key=api_key
     )
 
